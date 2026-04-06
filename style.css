@@ -163,6 +163,9 @@ body {
   text-align: center;
 }
 
+/* Mobile Auth Bar (hidden on desktop) */
+.mobile-auth { display: none; }
+
 /* Main Content */
 #content {
   flex: 1;
@@ -1274,6 +1277,20 @@ body {
     border-top: 1px solid var(--border);
   }
   .logo, .sidebar-stats, .sidebar-auth { display: none; }
+  .mobile-auth {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .mobile-auth .signin-btn { font-size: 0.8rem; padding: 8px 14px; }
+  .mobile-auth .user-info { gap: 8px; }
+  .mobile-auth .user-avatar { width: 28px; height: 28px; }
+  .mobile-auth .user-name { font-size: 0.8rem; }
+  .mobile-auth .sync-status { margin: 0; font-size: 0.7rem; }
   .nav-group-header { display: none; }
   .nav-links { display: flex; margin: 0; gap: 4px; overflow-x: auto; }
   .nav-links a { padding: 8px 12px; font-size: 0.8rem; white-space: nowrap; }

@@ -37,9 +37,11 @@ const FirebaseSync = {
   _setupAuthUI() {
     const signInBtn = document.getElementById('google-signin-btn');
     const signOutBtn = document.getElementById('signout-btn');
+    const mobileSignInBtn = document.getElementById('mobile-signin-btn');
 
     if (signInBtn) signInBtn.addEventListener('click', () => this.signIn());
     if (signOutBtn) signOutBtn.addEventListener('click', () => this.signOut());
+    if (mobileSignInBtn) mobileSignInBtn.addEventListener('click', () => this.signIn());
   },
 
   _listenAuthState() {
@@ -62,16 +64,33 @@ const FirebaseSync = {
     const name = document.getElementById('user-name');
     const syncStatus = document.getElementById('sync-status');
 
+    // Mobile auth elements
+    const mobileSignInBtn = document.getElementById('mobile-signin-btn');
+    const mobileUserInfo = document.getElementById('mobile-user-info');
+    const mobileAvatar = document.getElementById('mobile-user-avatar');
+    const mobileName = document.getElementById('mobile-user-name');
+    const mobileSyncStatus = document.getElementById('mobile-sync-status');
+
     if (this.user) {
       if (signInBtn) signInBtn.style.display = 'none';
       if (userInfo) userInfo.style.display = 'flex';
       if (avatar) avatar.src = this.user.photoURL || '';
       if (name) name.textContent = this.user.displayName || this.user.email;
       if (syncStatus) syncStatus.textContent = 'Synced';
+      // Mobile
+      if (mobileSignInBtn) mobileSignInBtn.style.display = 'none';
+      if (mobileUserInfo) mobileUserInfo.style.display = 'flex';
+      if (mobileAvatar) mobileAvatar.src = this.user.photoURL || '';
+      if (mobileName) mobileName.textContent = this.user.displayName || this.user.email;
+      if (mobileSyncStatus) mobileSyncStatus.textContent = 'Synced';
     } else {
       if (signInBtn) signInBtn.style.display = 'flex';
       if (userInfo) userInfo.style.display = 'none';
       if (syncStatus) syncStatus.textContent = '';
+      // Mobile
+      if (mobileSignInBtn) mobileSignInBtn.style.display = 'flex';
+      if (mobileUserInfo) mobileUserInfo.style.display = 'none';
+      if (mobileSyncStatus) mobileSyncStatus.textContent = '';
     }
   },
 
@@ -261,6 +280,8 @@ const FirebaseSync = {
 
   _setSyncStatus(text) {
     const el = document.getElementById('sync-status');
+    const mobileEl = document.getElementById('mobile-sync-status');
     if (el) el.textContent = text;
+    if (mobileEl) mobileEl.textContent = text;
   },
 };
