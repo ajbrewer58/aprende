@@ -5,7 +5,7 @@ const SHELL_FILES = [
   './app.js',
   './grammar.js',
   './grammar-data.js',
-  './firebase-sync.js',
+  './firebase-sync.js?v=5',
   './style.css',
   './seed-data.json',
   './manifest.json',
