@@ -29,6 +29,7 @@ const FirebaseSync = {
     firebase.initializeApp(this.config);
     this._setupAuthUI();
     this._listenAuthState();
+    this._handleRedirectResult();
     this._listenOnlineStatus();
   },
 
@@ -42,6 +43,17 @@ const FirebaseSync = {
     if (signInBtn) signInBtn.addEventListener('click', () => this.signIn());
     if (signOutBtn) signOutBtn.addEventListener('click', () => this.signOut());
     if (mobileSignInBtn) mobileSignInBtn.addEventListener('click', () => this.signIn());
+  },
+
+  async _handleRedirectResult() {
+    try {
+      const result = await firebase.auth().getRedirectResult();
+      if (result.user) {
+        console.log('Redirect sign-in successful:', result.user.displayName);
+      }
+    } catch (err) {
+      console.error('Redirect result error:', err);
+    }
   },
 
   _listenAuthState() {
@@ -95,12 +107,18 @@ const FirebaseSync = {
   },
 
   async signIn() {
+    const provider = new firebase.auth.GoogleAuthProvider();
     try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      // Use redirect instead of popup — more reliable on all devices
-      await firebase.auth().signInWithRedirect(provider);
+      // Try popup first
+      await firebase.auth().signInWithPopup(provider);
     } catch (err) {
-      console.error('Sign-in failed:', err);
+      console.error('Popup sign-in failed, trying redirect:', err.code);
+      // Fallback to redirect if popup blocked or fails
+      try {
+        await firebase.auth().signInWithRedirect(provider);
+      } catch (redirectErr) {
+        console.error('Redirect sign-in also failed:', redirectErr);
+      }
     }
   },
 
