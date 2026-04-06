@@ -10,7 +10,7 @@ const FirebaseSync = {
 
   config: {
     apiKey: "AIzaSyBCDMvomAMM1F7UwcKCT56il0r0sfRkR2A",
-    authDomain: "aprende-c083c.firebaseapp.com",
+    authDomain: "ajbrewer58.github.io",
     databaseURL: "https://aprende-c083c-default-rtdb.firebaseio.com",
     projectId: "aprende-c083c",
     storageBucket: "aprende-c083c.firebasestorage.app",
