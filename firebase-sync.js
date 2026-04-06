@@ -47,17 +47,21 @@ const FirebaseSync = {
 
   async _handleRedirectResult() {
     try {
+      console.log('[Auth] Checking redirect result...');
       const result = await firebase.auth().getRedirectResult();
       if (result.user) {
-        console.log('Redirect sign-in successful:', result.user.displayName);
+        console.log('[Auth] Redirect sign-in successful:', result.user.displayName);
+      } else {
+        console.log('[Auth] No redirect result (normal page load)');
       }
     } catch (err) {
-      console.error('Redirect result error:', err);
+      console.error('[Auth] Redirect result error:', err.code, err.message);
     }
   },
 
   _listenAuthState() {
     firebase.auth().onAuthStateChanged(user => {
+      console.log('[Auth] State changed:', user ? user.displayName : 'signed out');
       this.user = user;
       this._updateAuthUI();
 
@@ -107,8 +111,16 @@ const FirebaseSync = {
   },
 
   async signIn() {
+    console.log('[Auth] Starting sign-in...');
     const provider = new firebase.auth.GoogleAuthProvider();
-    await firebase.auth().signInWithRedirect(provider);
+    try {
+      console.log('[Auth] Trying popup...');
+      const result = await firebase.auth().signInWithPopup(provider);
+      console.log('[Auth] Popup success:', result.user.displayName);
+    } catch (err) {
+      console.log('[Auth] Popup failed:', err.code, '- trying redirect...');
+      await firebase.auth().signInWithRedirect(provider);
+    }
   },
 
   async signOut() {
