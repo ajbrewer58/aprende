@@ -108,18 +108,7 @@ const FirebaseSync = {
 
   async signIn() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-      // Try popup first
-      await firebase.auth().signInWithPopup(provider);
-    } catch (err) {
-      console.error('Popup sign-in failed, trying redirect:', err.code);
-      // Fallback to redirect if popup blocked or fails
-      try {
-        await firebase.auth().signInWithRedirect(provider);
-      } catch (redirectErr) {
-        console.error('Redirect sign-in also failed:', redirectErr);
-      }
-    }
+    await firebase.auth().signInWithRedirect(provider);
   },
 
   async signOut() {
