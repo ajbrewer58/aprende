@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aprende-v4';
+const CACHE_NAME = 'aprende-v5';
 const SHELL_FILES = [
   './',
   './index.html',

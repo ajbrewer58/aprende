@@ -10,7 +10,7 @@ const FirebaseSync = {
 
   config: {
     apiKey: "AIzaSyBCDMvomAMM1F7UwcKCT56il0r0sfRkR2A",
-    authDomain: "ajbrewer58.github.io",
+    authDomain: "aprende-c083c.firebaseapp.com",
     databaseURL: "https://aprende-c083c-default-rtdb.firebaseio.com",
     projectId: "aprende-c083c",
     storageBucket: "aprende-c083c.firebasestorage.app",
@@ -29,7 +29,6 @@ const FirebaseSync = {
     firebase.initializeApp(this.config);
     this._setupAuthUI();
     this._listenAuthState();
-    this._handleRedirectResult();
     this._listenOnlineStatus();
   },
 
@@ -110,17 +109,19 @@ const FirebaseSync = {
     }
   },
 
-  async signIn() {
-    console.log('[Auth] Starting sign-in...');
+  signIn() {
+    console.log('[Auth] Starting popup sign-in...');
     const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-      console.log('[Auth] Trying popup...');
-      const result = await firebase.auth().signInWithPopup(provider);
-      console.log('[Auth] Popup success:', result.user.displayName);
-    } catch (err) {
-      console.log('[Auth] Popup failed:', err.code, '- trying redirect...');
-      await firebase.auth().signInWithRedirect(provider);
-    }
+    // Use popup only — must be called synchronously from user click to avoid blocking.
+    // Do NOT use redirect fallback (requires __/auth/handler on authDomain).
+    firebase.auth().signInWithPopup(provider)
+      .then(result => {
+        console.log('[Auth] Popup success:', result.user.displayName);
+      })
+      .catch(err => {
+        console.error('[Auth] Popup error:', err.code, err.message);
+        alert('Sign-in failed: ' + err.message);
+      });
   },
 
   async signOut() {
