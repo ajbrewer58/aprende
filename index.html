@@ -32,6 +32,8 @@
         <li class="nav-group-header">Grammar</li>
         <li><a href="#" data-view="grammar-exercises">Exercises & Drills</a></li>
         <li><a href="#" data-view="grammar-sheets">Cheat Sheets</a></li>
+        <li class="nav-group-header">Study</li>
+        <li><a href="#" data-view="study">Study Time</a></li>
       </ul>
       <div class="sidebar-stats">
         <div class="stat-item">
@@ -270,6 +272,82 @@
 
       <!-- Grammar Cheat Sheets View -->
       <section id="view-grammar-sheets" class="view"></section>
+
+      <!-- Study Time View -->
+      <section id="view-study" class="view">
+        <h2>Study Time Tracker</h2>
+
+        <div class="study-top-grid">
+          <div class="study-card study-total-card">
+            <div class="study-card-icon">⏱️</div>
+            <div class="study-card-label">Total Hours Studied</div>
+            <div class="study-total-num" id="study-total-hours">0</div>
+          </div>
+          <div class="study-card study-today-card">
+            <div class="study-card-icon">☀️</div>
+            <div class="study-card-label">Today</div>
+            <div class="study-week-num"><span id="study-today-hours">0</span> / 2 hrs</div>
+            <div class="study-week-bar">
+              <div class="study-week-bar-fill" id="study-today-bar-fill"></div>
+            </div>
+            <div class="study-week-status" id="study-today-status"></div>
+          </div>
+          <div class="study-card study-week-card">
+            <div class="study-card-icon">📅</div>
+            <div class="study-card-label">This Week</div>
+            <div class="study-week-num"><span id="study-week-hours">0</span> / 6 hrs</div>
+            <div class="study-week-bar">
+              <div class="study-week-bar-fill" id="study-week-bar-fill"></div>
+            </div>
+            <div class="study-week-status" id="study-week-status"></div>
+          </div>
+        </div>
+
+        <div class="study-daily-section">
+          <div class="study-daily-header">
+            <h3>Daily Goal (2 hr/day)</h3>
+            <div class="study-streak">🔥 <span id="study-daily-streak">0</span> day streak</div>
+          </div>
+          <div class="study-daily-strip" id="study-daily-strip"></div>
+        </div>
+
+        <div class="study-add-section">
+          <h3>Log a Session</h3>
+          <div class="study-add-buttons">
+            <button class="study-add-btn" data-mins="15">+ 15 min</button>
+            <button class="study-add-btn" data-mins="30">+ 30 min</button>
+            <button class="study-add-btn" data-mins="45">+ 45 min</button>
+            <button class="study-add-btn" data-mins="60">+ 1 hour</button>
+            <button class="study-add-btn" data-mins="90">+ 1.5 hr</button>
+            <button class="study-add-btn" data-mins="120">+ 2 hours</button>
+          </div>
+          <div class="study-custom-row">
+            <input type="number" id="study-custom-mins" placeholder="Custom minutes" min="1" max="600">
+            <button id="study-custom-add" class="btn btn-primary">Add</button>
+          </div>
+        </div>
+
+        <div class="study-level-section">
+          <h3>CEFR Level Progress</h3>
+          <div class="study-level-current">
+            <div class="study-level-badge" id="study-level-badge">A2</div>
+            <div class="study-level-info">
+              <h4 id="study-level-title">Elementary</h4>
+              <p id="study-level-desc"></p>
+            </div>
+          </div>
+          <div class="study-level-bar">
+            <div class="study-level-bar-fill" id="study-level-bar-fill"></div>
+            <div class="study-level-bar-label" id="study-level-bar-label"></div>
+          </div>
+          <div class="study-level-milestones" id="study-level-milestones"></div>
+        </div>
+
+        <div class="study-history-section">
+          <h3>Recent Sessions</h3>
+          <div id="study-history-list" class="study-history-list"></div>
+        </div>
+      </section>
     </main>
   </div>
 

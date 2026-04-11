@@ -94,8 +94,13 @@ const Store = {
 
   load() {
     try {
-      const data = localStorage.getItem(this.KEY);
-      return data ? JSON.parse(data) : this.defaults();
+      const raw = localStorage.getItem(this.KEY);
+      const data = raw ? JSON.parse(raw) : this.defaults();
+      // Migrate older saves that lack studyTime
+      if (!data.studyTime) {
+        data.studyTime = { totalHours: 100, sessions: [] };
+      }
+      return data;
     } catch {
       return this.defaults();
     }
@@ -112,10 +117,22 @@ const Store = {
   defaults() {
     return {
       words: [],
-      stats: { reviewedToday: 0, lastReviewDate: null, streak: 0 }
+      stats: { reviewedToday: 0, lastReviewDate: null, streak: 0 },
+      studyTime: { totalHours: 100, sessions: [] }
     };
   }
 };
+
+// CEFR levels for Spanish — approximate hours of study to reach each level
+// Based on Cambridge / FSI guidelines for Romance languages
+const CEFR_LEVELS = [
+  { code: 'A1', title: 'Beginner',          desc: 'Basic phrases, introductions',         min: 0,    max: 80   },
+  { code: 'A2', title: 'Elementary',        desc: 'Routine tasks, simple exchanges',      min: 80,   max: 200  },
+  { code: 'B1', title: 'Intermediate',      desc: 'Travel, work, familiar topics',        min: 200,  max: 400  },
+  { code: 'B2', title: 'Upper Intermediate',desc: 'Complex texts, fluent interaction',    min: 400,  max: 600  },
+  { code: 'C1', title: 'Advanced',          desc: 'Implicit meaning, flexible use',       min: 600,  max: 800  },
+  { code: 'C2', title: 'Mastery',           desc: 'Near-native proficiency',              min: 800,  max: 1200 },
+];
 
 // ============================================================
 // PDF Parser
@@ -373,6 +390,19 @@ class App {
     // Browse filters
     document.getElementById('browse-search').addEventListener('input', () => this.renderBrowse());
     document.getElementById('browse-filter').addEventListener('change', () => this.renderBrowse());
+
+    // Study time
+    document.querySelectorAll('.study-add-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.addStudySession(parseInt(btn.dataset.mins)));
+    });
+    document.getElementById('study-custom-add').addEventListener('click', () => {
+      const input = document.getElementById('study-custom-mins');
+      const mins = parseInt(input.value);
+      if (mins && mins > 0) {
+        this.addStudySession(mins);
+        input.value = '';
+      }
+    });
   }
 
   navigate(view) {
@@ -389,6 +419,7 @@ class App {
     if (view === 'charts') this.renderCharts();
     if (view === 'grammar-exercises') this.grammar.renderExercises();
     if (view === 'grammar-sheets') this.grammar.renderCheatSheets();
+    if (view === 'study') this.renderStudyTime();
   }
 
   updateSidebarStats() {
@@ -891,6 +922,176 @@ class App {
     if (hours < 24) return `in ${hours}h`;
     const days = Math.floor(hours / 24);
     return `in ${days}d`;
+  }
+
+  // ---- Study Time ----
+
+  addStudySession(minutes) {
+    const hours = minutes / 60;
+    this.data.studyTime.totalHours = +(this.data.studyTime.totalHours + hours).toFixed(2);
+    this.data.studyTime.sessions.push({ date: Date.now(), hours });
+    // Keep only last 200 sessions to avoid bloat
+    if (this.data.studyTime.sessions.length > 200) {
+      this.data.studyTime.sessions = this.data.studyTime.sessions.slice(-200);
+    }
+    Store.save(this.data);
+    this.renderStudyTime();
+  }
+
+  getCurrentLevel(totalHours) {
+    for (const lvl of CEFR_LEVELS) {
+      if (totalHours >= lvl.min && totalHours < lvl.max) return lvl;
+    }
+    return CEFR_LEVELS[CEFR_LEVELS.length - 1];
+  }
+
+  renderStudyTime() {
+    const st = this.data.studyTime;
+    const total = st.totalHours;
+
+    // Total
+    document.getElementById('study-total-hours').textContent = total.toFixed(1);
+
+    // Build per-day totals (last 7 days, including today)
+    const dayMs = 24 * 60 * 60 * 1000;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = startOfToday.getTime() - i * dayMs;
+      const dayEnd = dayStart + dayMs;
+      const hours = st.sessions
+        .filter(s => s.date >= dayStart && s.date < dayEnd)
+        .reduce((sum, s) => sum + s.hours, 0);
+      days.push({ start: dayStart, hours });
+    }
+
+    // Today
+    const todayHours = days[days.length - 1].hours;
+    document.getElementById('study-today-hours').textContent = todayHours.toFixed(1);
+    const todayPct = Math.min((todayHours / 2) * 100, 100);
+    document.getElementById('study-today-bar-fill').style.width = `${todayPct}%`;
+    const todayStatus = document.getElementById('study-today-status');
+    if (todayHours >= 2) {
+      todayStatus.textContent = '🎯 Daily goal hit!';
+      todayStatus.className = 'study-week-status hit';
+    } else {
+      const remaining = +(2 - todayHours).toFixed(1);
+      todayStatus.textContent = `${remaining} hr to go today`;
+      todayStatus.className = 'study-week-status';
+    }
+
+    // Weekly progress (sum of last 7 days)
+    const weekHours = days.reduce((sum, d) => sum + d.hours, 0);
+    const weekRounded = +weekHours.toFixed(1);
+    document.getElementById('study-week-hours').textContent = weekRounded;
+    const weekPct = Math.min((weekHours / 6) * 100, 100);
+    document.getElementById('study-week-bar-fill').style.width = `${weekPct}%`;
+    const weekStatus = document.getElementById('study-week-status');
+    if (weekHours >= 6) {
+      weekStatus.textContent = '🎯 Goal hit! Keep going.';
+      weekStatus.className = 'study-week-status hit';
+    } else {
+      const remaining = +(6 - weekHours).toFixed(1);
+      weekStatus.textContent = `${remaining} hr to go this week`;
+      weekStatus.className = 'study-week-status';
+    }
+
+    // Daily strip (last 7 days)
+    const strip = document.getElementById('study-daily-strip');
+    strip.innerHTML = days.map((d, idx) => {
+      const dt = new Date(d.start);
+      const dayLabel = idx === days.length - 1 ? 'Today' : dt.toLocaleDateString('en', { weekday: 'short' });
+      const hit = d.hours >= 2;
+      const pct = Math.min((d.hours / 2) * 100, 100);
+      return `
+        <div class="study-day ${hit ? 'hit' : ''} ${idx === days.length - 1 ? 'today' : ''}">
+          <div class="study-day-label">${dayLabel}</div>
+          <div class="study-day-bar"><div class="study-day-bar-fill" style="height:${pct}%"></div></div>
+          <div class="study-day-hrs">${d.hours.toFixed(1)}h</div>
+          <div class="study-day-check">${hit ? '✓' : ''}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Daily streak — count consecutive days hitting goal, ending today (or yesterday if today not yet)
+    let streak = 0;
+    // Walk backwards from today
+    for (let i = days.length - 1; i >= 0; i--) {
+      if (days[i].hours >= 2) {
+        streak++;
+      } else if (i === days.length - 1 && days[i].hours < 2) {
+        // Today not yet hit — don't break streak; check yesterday onward
+        continue;
+      } else {
+        break;
+      }
+    }
+    // If today wasn't hit but was counted as "continue", subtract it
+    if (days[days.length - 1].hours < 2 && streak > 0) {
+      // streak was inflated by skipping today; recount from yesterday
+      streak = 0;
+      for (let i = days.length - 2; i >= 0; i--) {
+        if (days[i].hours >= 2) streak++;
+        else break;
+      }
+    }
+    document.getElementById('study-daily-streak').textContent = streak;
+
+    // CEFR level
+    const lvl = this.getCurrentLevel(total);
+    document.getElementById('study-level-badge').textContent = lvl.code;
+    document.getElementById('study-level-badge').className = `study-level-badge level-${lvl.code.toLowerCase()}`;
+    document.getElementById('study-level-title').textContent = lvl.title;
+    document.getElementById('study-level-desc').textContent = lvl.desc;
+
+    // Level bar — progress within current level
+    const levelRange = lvl.max - lvl.min;
+    const intoLevel = total - lvl.min;
+    const levelPct = Math.min((intoLevel / levelRange) * 100, 100);
+    document.getElementById('study-level-bar-fill').style.width = `${levelPct}%`;
+    const nextLvl = CEFR_LEVELS[CEFR_LEVELS.indexOf(lvl) + 1];
+    const barLabel = document.getElementById('study-level-bar-label');
+    if (nextLvl) {
+      const toGo = +(lvl.max - total).toFixed(1);
+      barLabel.textContent = `${toGo} hr to ${nextLvl.code}`;
+    } else {
+      barLabel.textContent = 'Mastery achieved!';
+    }
+
+    // Milestones row
+    const milestones = document.getElementById('study-level-milestones');
+    milestones.innerHTML = CEFR_LEVELS.map(l => {
+      const reached = total >= l.min;
+      const current = l === lvl;
+      return `
+        <div class="study-milestone ${reached ? 'reached' : ''} ${current ? 'current' : ''}">
+          <div class="study-milestone-dot level-${l.code.toLowerCase()}">${l.code}</div>
+          <div class="study-milestone-hrs">${l.min}h</div>
+        </div>
+      `;
+    }).join('');
+
+    // Recent sessions (last 10)
+    const list = document.getElementById('study-history-list');
+    const recent = [...st.sessions].slice(-10).reverse();
+    if (recent.length === 0) {
+      list.innerHTML = '<p class="study-empty">No sessions logged yet. Add your first session above!</p>';
+    } else {
+      list.innerHTML = recent.map(s => {
+        const d = new Date(s.date);
+        const dateStr = d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+        const timeStr = d.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' });
+        const mins = Math.round(s.hours * 60);
+        const display = mins >= 60 ? `${(s.hours).toFixed(1)} hr` : `${mins} min`;
+        return `
+          <div class="study-history-item">
+            <span class="study-history-date">${dateStr} · ${timeStr}</span>
+            <span class="study-history-hours">${display}</span>
+          </div>
+        `;
+      }).join('');
+    }
   }
 
   // ---- Utilities ----
