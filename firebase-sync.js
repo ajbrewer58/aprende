@@ -143,10 +143,15 @@ const FirebaseSync = {
     if (!this.user) return;
     clearTimeout(this._vocabDebounce);
     this._vocabDebounce = setTimeout(() => {
+      this._localPushInProgress = true;
       const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
       this._dbRef('vocab').set(payload)
-        .then(() => this._setSyncStatus('Synced'))
+        .then(() => {
+          this._localPushInProgress = false;
+          this._setSyncStatus('Synced');
+        })
         .catch(err => {
+          this._localPushInProgress = false;
           console.error('Vocab push failed:', err);
           this._setSyncStatus('Sync error');
         });
@@ -249,7 +254,7 @@ const FirebaseSync = {
       const local = localRaw ? JSON.parse(localRaw) : null;
       const localTime = local?.lastModified || 0;
 
-      if (remote.lastModified > localTime) {
+      if (remote.lastModified > localTime && !this._localPushInProgress) {
         const { lastModified, ...vocabData } = remote;
         vocabData.lastModified = lastModified;
         localStorage.setItem('spanish-vocab-data', JSON.stringify(vocabData));

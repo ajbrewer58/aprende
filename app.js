@@ -299,6 +299,8 @@ class App {
   reload() {
     this.data = Store.load();
     this.updateSidebarStats();
+    // Don't reset the review session on remote sync
+    if (this.currentView === 'review' && this._reviewInProgress) return;
     this.navigate(this.currentView);
   }
 
@@ -486,16 +488,38 @@ class App {
   // ---- Review ----
 
   startReview() {
+    const DAILY_LIMIT = 50;
+    const alreadyDone = this.data.stats.reviewedToday || 0;
+    const remaining = Math.max(DAILY_LIMIT - alreadyDone, 0);
+
+    if (remaining === 0) {
+      this._reviewInProgress = false;
+      document.getElementById('review-empty').style.display = '';
+      document.getElementById('review-active').style.display = 'none';
+      document.querySelector('#view-review .empty-state .empty-icon').textContent = '🎉';
+      document.querySelector('#view-review .empty-state h3').textContent = 'Daily goal complete!';
+      document.querySelector('#view-review .empty-state p').textContent =
+        `You've reviewed all ${DAILY_LIMIT} cards for today. Come back tomorrow!`;
+      return;
+    }
+
     this.reviewQueue = this.data.words
       .filter(w => SM2.isDue(w.sm2))
-      .sort((a, b) => a.sm2.dueDate - b.sm2.dueDate);
+      .sort((a, b) => a.sm2.dueDate - b.sm2.dueDate)
+      .slice(0, remaining);
 
     this.reviewIndex = 0;
     this.reviewedThisSession = 0;
+    this._reviewInProgress = true;
 
     if (this.reviewQueue.length === 0) {
+      this._reviewInProgress = false;
       document.getElementById('review-empty').style.display = '';
       document.getElementById('review-active').style.display = 'none';
+      document.querySelector('#view-review .empty-state .empty-icon').textContent = '🎉';
+      document.querySelector('#view-review .empty-state h3').textContent = 'All caught up!';
+      document.querySelector('#view-review .empty-state p').textContent =
+        `No cards are due for review right now. (${alreadyDone}/${DAILY_LIMIT} reviewed today)`;
     } else {
       document.getElementById('review-empty').style.display = 'none';
       document.getElementById('review-active').style.display = '';
@@ -504,13 +528,27 @@ class App {
   }
 
   showCard() {
+    const DAILY_LIMIT = 50;
+    const totalToday = this.data.stats.reviewedToday || 0;
+
     if (this.reviewIndex >= this.reviewQueue.length) {
       // Session complete
+      this._reviewInProgress = false;
       document.getElementById('review-empty').style.display = '';
       document.getElementById('review-active').style.display = 'none';
-      document.querySelector('.empty-state h3').textContent = 'Session complete!';
-      document.querySelector('.empty-state p').textContent =
-        `You reviewed ${this.reviewedThisSession} cards.`;
+      const icon = document.querySelector('#view-review .empty-state .empty-icon');
+      const h3 = document.querySelector('#view-review .empty-state h3');
+      const p = document.querySelector('#view-review .empty-state p');
+
+      if (totalToday >= DAILY_LIMIT) {
+        icon.textContent = '🏆';
+        h3.textContent = 'Daily goal complete!';
+        p.textContent = `Amazing! You've hit your ${DAILY_LIMIT}-card daily goal. Rest up and come back tomorrow!`;
+      } else {
+        icon.textContent = '🎉';
+        h3.textContent = 'Session complete!';
+        p.textContent = `You reviewed ${this.reviewedThisSession} cards. (${totalToday}/${DAILY_LIMIT} today)`;
+      }
       return;
     }
 
@@ -530,7 +568,7 @@ class App {
     // Update progress
     const total = this.reviewQueue.length;
     document.getElementById('review-count').textContent =
-      `${this.reviewIndex + 1} / ${total}`;
+      `${this.reviewIndex + 1} / ${total} (${totalToday}/${DAILY_LIMIT} today)`;
     document.getElementById('review-progress-fill').style.width =
       `${(this.reviewIndex / total) * 100}%`;
 
