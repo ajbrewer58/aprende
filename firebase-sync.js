@@ -142,16 +142,13 @@ const FirebaseSync = {
   pushVocabData(data) {
     if (!this.user) return;
     clearTimeout(this._vocabDebounce);
+    this._lastVocabPush = Date.now();
     this._vocabDebounce = setTimeout(() => {
-      this._localPushInProgress = true;
+      this._lastVocabPush = Date.now();
       const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
       this._dbRef('vocab').set(payload)
-        .then(() => {
-          this._localPushInProgress = false;
-          this._setSyncStatus('Synced');
-        })
+        .then(() => this._setSyncStatus('Synced'))
         .catch(err => {
-          this._localPushInProgress = false;
           console.error('Vocab push failed:', err);
           this._setSyncStatus('Sync error');
         });
@@ -161,7 +158,9 @@ const FirebaseSync = {
   pushGrammarData(data) {
     if (!this.user) return;
     clearTimeout(this._grammarDebounce);
+    this._lastGrammarPush = Date.now();
     this._grammarDebounce = setTimeout(() => {
+      this._lastGrammarPush = Date.now();
       const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
       this._dbRef('grammar').set(payload)
         .then(() => this._setSyncStatus('Synced'))
@@ -245,8 +244,13 @@ const FirebaseSync = {
   // ---- Real-time Listener ----
 
   _listenForRemoteChanges() {
+    const SUPPRESS_MS = 5000; // ignore echo-back within 5s of our own push
+
     // Listen for vocab changes from other devices
     this._dbRef('vocab').on('value', snap => {
+      // Ignore echo-back from our own writes
+      if (this._lastVocabPush && Date.now() - this._lastVocabPush < SUPPRESS_MS) return;
+
       const remote = snap.val();
       if (!remote || !remote.lastModified) return;
 
@@ -254,7 +258,7 @@ const FirebaseSync = {
       const local = localRaw ? JSON.parse(localRaw) : null;
       const localTime = local?.lastModified || 0;
 
-      if (remote.lastModified > localTime && !this._localPushInProgress) {
+      if (remote.lastModified > localTime) {
         const { lastModified, ...vocabData } = remote;
         vocabData.lastModified = lastModified;
         localStorage.setItem('spanish-vocab-data', JSON.stringify(vocabData));
@@ -265,6 +269,8 @@ const FirebaseSync = {
 
     // Listen for grammar changes
     this._dbRef('grammar').on('value', snap => {
+      if (this._lastGrammarPush && Date.now() - this._lastGrammarPush < SUPPRESS_MS) return;
+
       const remote = snap.val();
       if (!remote || !remote.lastModified) return;
 

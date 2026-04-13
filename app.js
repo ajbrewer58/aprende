@@ -297,10 +297,11 @@ class App {
   }
 
   reload() {
+    // During review, don't touch this.data or re-navigate — the active
+    // session owns the data and any remote overwrite would corrupt it.
+    if (this.currentView === 'review' && this._reviewInProgress) return;
     this.data = Store.load();
     this.updateSidebarStats();
-    // Don't reset the review session on remote sync
-    if (this.currentView === 'review' && this._reviewInProgress) return;
     this.navigate(this.currentView);
   }
 
