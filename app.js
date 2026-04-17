@@ -555,6 +555,11 @@ class App {
 
     const word = this.reviewQueue[this.reviewIndex];
     const card = document.getElementById('flashcard');
+    const inner = card.querySelector('.flashcard-inner');
+
+    // Disable flip transition during content swap so the back face
+    // (with the new English translation) isn't visible during the reset.
+    inner.style.transition = 'none';
     card.classList.remove('flipped');
 
     document.getElementById('card-front-word').textContent = word.spanish;
@@ -562,6 +567,11 @@ class App {
       word.example ? '(has example)' : '';
     document.getElementById('card-back-word').textContent = word.english;
     document.getElementById('card-back-example').textContent = word.example || '';
+
+    // Force reflow so the un-flip lands instantly, then restore transition
+    // for the user's next deliberate flip.
+    void inner.offsetWidth;
+    inner.style.transition = '';
 
     document.getElementById('rating-buttons').style.display = 'none';
     document.getElementById('flip-hint').style.display = '';
