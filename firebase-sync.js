@@ -142,33 +142,57 @@ const FirebaseSync = {
   pushVocabData(data) {
     if (!this.user) return;
     clearTimeout(this._vocabDebounce);
+    this._pendingVocabData = data;
     this._lastVocabPush = Date.now();
-    this._vocabDebounce = setTimeout(() => {
-      this._lastVocabPush = Date.now();
-      const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
-      this._dbRef('vocab').set(payload)
-        .then(() => this._setSyncStatus('Synced'))
-        .catch(err => {
-          console.error('Vocab push failed:', err);
-          this._setSyncStatus('Sync error');
-        });
-    }, 2000);
+    this._vocabDebounce = setTimeout(() => this._flushVocab(), 1000);
+  },
+
+  _flushVocab() {
+    if (!this.user || !this._pendingVocabData) return;
+    clearTimeout(this._vocabDebounce);
+    const data = this._pendingVocabData;
+    this._pendingVocabData = null;
+    this._lastVocabPush = Date.now();
+    this._setSyncStatus('Syncing...');
+    const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
+    return this._dbRef('vocab').set(payload)
+      .then(() => this._setSyncStatus('Synced'))
+      .catch(err => {
+        console.error('Vocab push failed:', err);
+        this._setSyncStatus('Sync error');
+        // Re-queue so it retries
+        this._pendingVocabData = data;
+      });
   },
 
   pushGrammarData(data) {
     if (!this.user) return;
     clearTimeout(this._grammarDebounce);
+    this._pendingGrammarData = data;
     this._lastGrammarPush = Date.now();
-    this._grammarDebounce = setTimeout(() => {
-      this._lastGrammarPush = Date.now();
-      const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
-      this._dbRef('grammar').set(payload)
-        .then(() => this._setSyncStatus('Synced'))
-        .catch(err => {
-          console.error('Grammar push failed:', err);
-          this._setSyncStatus('Sync error');
-        });
-    }, 2000);
+    this._grammarDebounce = setTimeout(() => this._flushGrammar(), 1000);
+  },
+
+  _flushGrammar() {
+    if (!this.user || !this._pendingGrammarData) return;
+    clearTimeout(this._grammarDebounce);
+    const data = this._pendingGrammarData;
+    this._pendingGrammarData = null;
+    this._lastGrammarPush = Date.now();
+    const payload = { ...data, lastModified: firebase.database.ServerValue.TIMESTAMP };
+    return this._dbRef('grammar').set(payload)
+      .then(() => this._setSyncStatus('Synced'))
+      .catch(err => {
+        console.error('Grammar push failed:', err);
+        this._setSyncStatus('Sync error');
+        this._pendingGrammarData = data;
+      });
+  },
+
+  // Flush any pending writes immediately — called when the page is hiding
+  _flushPending() {
+    if (this._pendingVocabData) this._flushVocab();
+    if (this._pendingGrammarData) this._flushGrammar();
   },
 
   async _pullVocabData() {
@@ -305,6 +329,15 @@ const FirebaseSync = {
     window.addEventListener('offline', () => {
       this._setSyncStatus('Offline');
     });
+
+    // CRITICAL: flush pending writes before page is closed/backgrounded
+    // visibilitychange fires on mobile when switching apps (pagehide may not
+    // fire reliably on iOS/Android). pagehide + beforeunload cover desktop.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this._flushPending();
+    });
+    window.addEventListener('pagehide', () => this._flushPending());
+    window.addEventListener('beforeunload', () => this._flushPending());
   },
 
   // ---- UI Helpers ----

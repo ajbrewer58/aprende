@@ -1,11 +1,11 @@
-const CACHE_NAME = 'aprende-v8';
+const CACHE_NAME = 'aprende-v9';
 const SHELL_FILES = [
   './',
   './index.html',
-  './app.js?v=8',
-  './grammar.js?v=8',
-  './grammar-data.js?v=8',
-  './firebase-sync.js?v=8',
+  './app.js?v=9',
+  './grammar.js?v=9',
+  './grammar-data.js?v=9',
+  './firebase-sync.js?v=9',
   './style.css',
   './seed-data.json',
   './manifest.json',
