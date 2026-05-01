@@ -34,6 +34,7 @@
         <li><a href="#" data-view="grammar-sheets">Cheat Sheets</a></li>
         <li class="nav-group-header">Study</li>
         <li><a href="#" data-view="study">Study Time</a></li>
+        <li><a href="#" data-view="goals">Goals & Settings</a></li>
       </ul>
       <div class="sidebar-stats">
         <div class="stat-item">
@@ -354,13 +355,66 @@
           <div id="study-history-list" class="study-history-list"></div>
         </div>
       </section>
+
+      <!-- Goals & Settings View -->
+      <section id="view-goals" class="view">
+        <h2>Goals & Settings</h2>
+        <p class="goals-intro">Adjust your daily and weekly targets. Changes apply immediately.</p>
+
+        <div class="goals-section">
+          <h3>📚 Vocab Reviews</h3>
+          <div class="goal-row">
+            <label for="goal-vocab-daily">Daily review limit</label>
+            <div class="goal-input-wrap">
+              <input type="number" id="goal-vocab-daily" min="5" max="500" step="5">
+              <span class="goal-unit">cards / day</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="goals-section">
+          <h3>⏱️ Study Time</h3>
+          <div class="goal-row">
+            <label for="goal-study-daily">Daily study goal</label>
+            <div class="goal-input-wrap">
+              <input type="number" id="goal-study-daily" min="0.5" max="12" step="0.25">
+              <span class="goal-unit">hours / day</span>
+            </div>
+          </div>
+          <div class="goal-row">
+            <label for="goal-study-weekly">Weekly study goal</label>
+            <div class="goal-input-wrap">
+              <input type="number" id="goal-study-weekly" min="1" max="84" step="0.5">
+              <span class="goal-unit">hours / week</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="goals-section">
+          <h3>📊 Total Hours Adjustment</h3>
+          <p class="goal-help">Manually correct your total hours studied if needed (this resets the running total without affecting individual sessions).</p>
+          <div class="goal-row">
+            <label for="goal-total-hours">Total hours studied</label>
+            <div class="goal-input-wrap">
+              <input type="number" id="goal-total-hours" min="0" step="0.5">
+              <span class="goal-unit">hours</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="goals-actions">
+          <button id="goals-save" class="btn btn-primary">Save Goals</button>
+          <button id="goals-reset" class="goals-reset-btn">Reset to defaults</button>
+          <span id="goals-feedback" class="goals-feedback"></span>
+        </div>
+      </section>
     </main>
   </div>
 
-  <script src="firebase-sync.js?v=11"></script>
-  <script src="grammar-data.js?v=11"></script>
-  <script src="grammar.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="firebase-sync.js?v=12"></script>
+  <script src="grammar-data.js?v=12"></script>
+  <script src="grammar.js?v=12"></script>
+  <script src="app.js?v=12"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');

@@ -100,10 +100,22 @@ const Store = {
       if (!data.studyTime) {
         data.studyTime = { totalHours: 100, sessions: [] };
       }
+      // Migrate older saves that lack goals
+      if (!data.goals) {
+        data.goals = this.defaultGoals();
+      }
       return data;
     } catch {
       return this.defaults();
     }
+  },
+
+  defaultGoals() {
+    return {
+      dailyVocabLimit: 50,
+      dailyHours: 2,
+      weeklyHours: 6,
+    };
   },
 
   save(data) {
@@ -118,7 +130,8 @@ const Store = {
     return {
       words: [],
       stats: { reviewedToday: 0, lastReviewDate: null, streak: 0 },
-      studyTime: { totalHours: 100, sessions: [] }
+      studyTime: { totalHours: 100, sessions: [] },
+      goals: { dailyVocabLimit: 50, dailyHours: 2, weeklyHours: 6 }
     };
   }
 };
@@ -416,6 +429,10 @@ class App {
     document.getElementById('study-date-today').addEventListener('click', () => {
       dateInput.value = new Date().toISOString().slice(0, 10);
     });
+
+    // Goals
+    document.getElementById('goals-save').addEventListener('click', () => this.saveGoals());
+    document.getElementById('goals-reset').addEventListener('click', () => this.resetGoals());
   }
 
   navigate(view) {
@@ -433,6 +450,7 @@ class App {
     if (view === 'grammar-exercises') this.grammar.renderExercises();
     if (view === 'grammar-sheets') this.grammar.renderCheatSheets();
     if (view === 'study') this.renderStudyTime();
+    if (view === 'goals') this.renderGoals();
   }
 
   updateSidebarStats() {
@@ -508,7 +526,7 @@ class App {
   }
 
   startReview() {
-    const DAILY_LIMIT = 50;
+    const DAILY_LIMIT = this.data.goals?.dailyVocabLimit || 50;
     const alreadyDone = this.data.stats.reviewedToday || 0;
     const remaining = Math.max(DAILY_LIMIT - alreadyDone, 0);
 
@@ -548,7 +566,7 @@ class App {
   }
 
   showCard() {
-    const DAILY_LIMIT = 50;
+    const DAILY_LIMIT = this.data.goals?.dailyVocabLimit || 50;
     const totalToday = this.data.stats.reviewedToday || 0;
 
     if (this.reviewIndex >= this.reviewQueue.length) {
@@ -1066,17 +1084,23 @@ class App {
       days.push({ start: dayStart, hours });
     }
 
+    const dailyGoal = this.data.goals?.dailyHours || 2;
+    const weeklyGoal = this.data.goals?.weeklyHours || 6;
+
     // Today
     const todayHours = days[days.length - 1].hours;
     document.getElementById('study-today-hours').textContent = todayHours.toFixed(1);
-    const todayPct = Math.min((todayHours / 2) * 100, 100);
+    const todayPct = Math.min((todayHours / dailyGoal) * 100, 100);
     document.getElementById('study-today-bar-fill').style.width = `${todayPct}%`;
+    // Update label to reflect current goal
+    const todayCard = document.querySelector('.study-today-card .study-week-num');
+    if (todayCard) todayCard.innerHTML = `<span id="study-today-hours">${todayHours.toFixed(1)}</span> / ${dailyGoal} hrs`;
     const todayStatus = document.getElementById('study-today-status');
-    if (todayHours >= 2) {
+    if (todayHours >= dailyGoal) {
       todayStatus.textContent = '🎯 Daily goal hit!';
       todayStatus.className = 'study-week-status hit';
     } else {
-      const remaining = +(2 - todayHours).toFixed(1);
+      const remaining = +(dailyGoal - todayHours).toFixed(1);
       todayStatus.textContent = `${remaining} hr to go today`;
       todayStatus.className = 'study-week-status';
     }
@@ -1085,25 +1109,31 @@ class App {
     const weekHours = days.reduce((sum, d) => sum + d.hours, 0);
     const weekRounded = +weekHours.toFixed(1);
     document.getElementById('study-week-hours').textContent = weekRounded;
-    const weekPct = Math.min((weekHours / 6) * 100, 100);
+    const weekPct = Math.min((weekHours / weeklyGoal) * 100, 100);
     document.getElementById('study-week-bar-fill').style.width = `${weekPct}%`;
+    const weekCard = document.querySelector('.study-week-card .study-week-num');
+    if (weekCard) weekCard.innerHTML = `<span id="study-week-hours">${weekRounded}</span> / ${weeklyGoal} hrs`;
     const weekStatus = document.getElementById('study-week-status');
-    if (weekHours >= 6) {
+    if (weekHours >= weeklyGoal) {
       weekStatus.textContent = '🎯 Goal hit! Keep going.';
       weekStatus.className = 'study-week-status hit';
     } else {
-      const remaining = +(6 - weekHours).toFixed(1);
+      const remaining = +(weeklyGoal - weekHours).toFixed(1);
       weekStatus.textContent = `${remaining} hr to go this week`;
       weekStatus.className = 'study-week-status';
     }
+
+    // Update daily-section header to reflect goal
+    const dailyHeader = document.querySelector('.study-daily-header h3');
+    if (dailyHeader) dailyHeader.textContent = `Daily Goal (${dailyGoal} hr/day)`;
 
     // Daily strip (last 7 days)
     const strip = document.getElementById('study-daily-strip');
     strip.innerHTML = days.map((d, idx) => {
       const dt = new Date(d.start);
       const dayLabel = idx === days.length - 1 ? 'Today' : dt.toLocaleDateString('en', { weekday: 'short' });
-      const hit = d.hours >= 2;
-      const pct = Math.min((d.hours / 2) * 100, 100);
+      const hit = d.hours >= dailyGoal;
+      const pct = Math.min((d.hours / dailyGoal) * 100, 100);
       return `
         <div class="study-day ${hit ? 'hit' : ''} ${idx === days.length - 1 ? 'today' : ''}">
           <div class="study-day-label">${dayLabel}</div>
@@ -1116,23 +1146,19 @@ class App {
 
     // Daily streak — count consecutive days hitting goal, ending today (or yesterday if today not yet)
     let streak = 0;
-    // Walk backwards from today
     for (let i = days.length - 1; i >= 0; i--) {
-      if (days[i].hours >= 2) {
+      if (days[i].hours >= dailyGoal) {
         streak++;
-      } else if (i === days.length - 1 && days[i].hours < 2) {
-        // Today not yet hit — don't break streak; check yesterday onward
+      } else if (i === days.length - 1 && days[i].hours < dailyGoal) {
         continue;
       } else {
         break;
       }
     }
-    // If today wasn't hit but was counted as "continue", subtract it
-    if (days[days.length - 1].hours < 2 && streak > 0) {
-      // streak was inflated by skipping today; recount from yesterday
+    if (days[days.length - 1].hours < dailyGoal && streak > 0) {
       streak = 0;
       for (let i = days.length - 2; i >= 0; i--) {
-        if (days[i].hours >= 2) streak++;
+        if (days[i].hours >= dailyGoal) streak++;
         else break;
       }
     }
@@ -1191,6 +1217,69 @@ class App {
           </div>
         `;
       }).join('');
+    }
+  }
+
+  // ---- Goals & Settings ----
+
+  renderGoals() {
+    const g = this.data.goals || Store.defaultGoals();
+    document.getElementById('goal-vocab-daily').value = g.dailyVocabLimit;
+    document.getElementById('goal-study-daily').value = g.dailyHours;
+    document.getElementById('goal-study-weekly').value = g.weeklyHours;
+    document.getElementById('goal-total-hours').value = this.data.studyTime.totalHours;
+    this._showGoalsFeedback('');
+  }
+
+  saveGoals() {
+    const dailyVocab = parseInt(document.getElementById('goal-vocab-daily').value);
+    const dailyHours = parseFloat(document.getElementById('goal-study-daily').value);
+    const weeklyHours = parseFloat(document.getElementById('goal-study-weekly').value);
+    const totalHours = parseFloat(document.getElementById('goal-total-hours').value);
+
+    // Validate
+    if (!dailyVocab || dailyVocab < 5 || dailyVocab > 500) {
+      return this._showGoalsFeedback('Daily vocab limit must be between 5 and 500', 'error');
+    }
+    if (!dailyHours || dailyHours < 0.25 || dailyHours > 24) {
+      return this._showGoalsFeedback('Daily hours must be between 0.25 and 24', 'error');
+    }
+    if (!weeklyHours || weeklyHours < 0.5 || weeklyHours > 168) {
+      return this._showGoalsFeedback('Weekly hours must be between 0.5 and 168', 'error');
+    }
+    if (isNaN(totalHours) || totalHours < 0) {
+      return this._showGoalsFeedback('Total hours must be 0 or greater', 'error');
+    }
+
+    this.data.goals = {
+      dailyVocabLimit: dailyVocab,
+      dailyHours: dailyHours,
+      weeklyHours: weeklyHours,
+    };
+    this.data.studyTime.totalHours = +totalHours.toFixed(2);
+
+    Store.save(this.data);
+    this._showGoalsFeedback('✓ Goals saved!', 'success');
+  }
+
+  resetGoals() {
+    this.data.goals = Store.defaultGoals();
+    Store.save(this.data);
+    this.renderGoals();
+    this._showGoalsFeedback('✓ Reset to defaults', 'success');
+  }
+
+  _showGoalsFeedback(text, type) {
+    const el = document.getElementById('goals-feedback');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'goals-feedback' + (type ? ' ' + type : '');
+    if (text) {
+      clearTimeout(this._goalsFeedbackTimer);
+      this._goalsFeedbackTimer = setTimeout(() => {
+        el.textContent = '';
+        el.className = 'goals-feedback';
+      }, 3000);
     }
   }
 

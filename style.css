@@ -1768,3 +1768,120 @@ body {
   .study-day { padding: 8px 2px; }
   .study-day-label { font-size: 10px; }
 }
+
+/* ============================================================
+   Goals & Settings View
+   ============================================================ */
+
+.goals-intro {
+  color: #8a8f9c;
+  margin-bottom: 24px;
+}
+
+.goals-section {
+  background: #1a1d27;
+  border: 1px solid #2a2e3d;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.goals-section h3 {
+  margin: 0 0 16px;
+  color: #fff;
+  font-size: 16px;
+}
+
+.goal-help {
+  color: #8a8f9c;
+  font-size: 13px;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #2a2e3d;
+}
+
+.goal-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.goal-row label {
+  color: #fff;
+  font-size: 14px;
+  flex: 1;
+}
+
+.goal-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.goal-input-wrap input {
+  background: #0f1117;
+  border: 1px solid #2a2e3d;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 14px;
+  width: 100px;
+  text-align: right;
+  font-family: inherit;
+}
+
+.goal-input-wrap input:focus {
+  outline: none;
+  border-color: #6c5ce7;
+}
+
+.goal-unit {
+  color: #8a8f9c;
+  font-size: 13px;
+  min-width: 80px;
+}
+
+.goals-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.goals-reset-btn {
+  background: transparent;
+  color: #8a8f9c;
+  border: 1px solid #2a2e3d;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.goals-reset-btn:hover {
+  color: #fff;
+  border-color: #6c5ce7;
+}
+
+.goals-feedback {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.goals-feedback.success { color: #00b894; }
+.goals-feedback.error   { color: #e17055; }
+
+@media (max-width: 768px) {
+  .goal-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .goal-input-wrap { width: 100%; justify-content: space-between; }
+  .goal-input-wrap input { flex: 1; }
+}
