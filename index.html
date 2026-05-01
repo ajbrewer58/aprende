@@ -370,6 +370,13 @@
               <span class="goal-unit">cards / day</span>
             </div>
           </div>
+          <div class="goal-row">
+            <label for="goal-vocab-new">New words per day (max)</label>
+            <div class="goal-input-wrap">
+              <input type="number" id="goal-vocab-new" min="0" max="100" step="1">
+              <span class="goal-unit">new / day</span>
+            </div>
+          </div>
         </div>
 
         <div class="goals-section">
@@ -411,10 +418,10 @@
     </main>
   </div>
 
-  <script src="firebase-sync.js?v=12"></script>
-  <script src="grammar-data.js?v=12"></script>
-  <script src="grammar.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="firebase-sync.js?v=13"></script>
+  <script src="grammar-data.js?v=13"></script>
+  <script src="grammar.js?v=13"></script>
+  <script src="app.js?v=13"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');

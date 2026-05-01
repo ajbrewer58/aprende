@@ -104,6 +104,14 @@ const Store = {
       if (!data.goals) {
         data.goals = this.defaultGoals();
       }
+      // Migrate: dailyNewLimit added in v13
+      if (data.goals.dailyNewLimit == null) {
+        data.goals.dailyNewLimit = 20;
+      }
+      // Migrate: newIntroducedToday counter
+      if (data.stats.newIntroducedToday == null) {
+        data.stats.newIntroducedToday = 0;
+      }
       return data;
     } catch {
       return this.defaults();
@@ -113,6 +121,7 @@ const Store = {
   defaultGoals() {
     return {
       dailyVocabLimit: 50,
+      dailyNewLimit: 20,
       dailyHours: 2,
       weeklyHours: 6,
     };
@@ -129,9 +138,9 @@ const Store = {
   defaults() {
     return {
       words: [],
-      stats: { reviewedToday: 0, lastReviewDate: null, streak: 0 },
+      stats: { reviewedToday: 0, newIntroducedToday: 0, lastReviewDate: null, streak: 0 },
       studyTime: { totalHours: 100, sessions: [] },
-      goals: { dailyVocabLimit: 50, dailyHours: 2, weeklyHours: 6 }
+      goals: { dailyVocabLimit: 50, dailyNewLimit: 20, dailyHours: 2, weeklyHours: 6 }
     };
   }
 };
@@ -333,6 +342,7 @@ class App {
         }
       }
       this.data.stats.reviewedToday = 0;
+      this.data.stats.newIntroducedToday = 0;
       this.data.stats.lastReviewDate = today;
       Store.save(this.data);
     }
@@ -527,10 +537,13 @@ class App {
 
   startReview() {
     const DAILY_LIMIT = this.data.goals?.dailyVocabLimit || 50;
+    const NEW_LIMIT = this.data.goals?.dailyNewLimit ?? 20;
     const alreadyDone = this.data.stats.reviewedToday || 0;
-    const remaining = Math.max(DAILY_LIMIT - alreadyDone, 0);
+    const newDoneToday = this.data.stats.newIntroducedToday || 0;
+    const totalRemaining = Math.max(DAILY_LIMIT - alreadyDone, 0);
+    const newRemaining = Math.max(NEW_LIMIT - newDoneToday, 0);
 
-    if (remaining === 0) {
+    if (totalRemaining === 0) {
       this._reviewInProgress = false;
       document.getElementById('review-empty').style.display = '';
       document.getElementById('review-active').style.display = 'none';
@@ -541,11 +554,19 @@ class App {
       return;
     }
 
-    this.reviewQueue = this.data.words
-      .filter(w => SM2.isDue(w.sm2))
-      .sort((a, b) => a.sm2.dueDate - b.sm2.dueDate)
-      .slice(0, remaining);
+    // Split due cards into review-cards (already learning/learned) and new-cards (never reviewed)
+    const dueCards = this.data.words.filter(w => SM2.isDue(w.sm2));
+    const isNew = w => SM2.getStatus(w.sm2) === 'new';
+    const reviewDue = dueCards.filter(w => !isNew(w)).sort((a, b) => a.sm2.dueDate - b.sm2.dueDate);
+    const newDue = dueCards.filter(isNew).sort((a, b) => a.createdAt - b.createdAt);
 
+    // Take all due reviews first (capped by total daily limit), then fill the
+    // remainder with new cards capped by the daily new-card limit.
+    const reviewSlice = reviewDue.slice(0, totalRemaining);
+    const slotsLeftAfterReviews = Math.max(totalRemaining - reviewSlice.length, 0);
+    const newSlice = newDue.slice(0, Math.min(newRemaining, slotsLeftAfterReviews));
+
+    this.reviewQueue = [...reviewSlice, ...newSlice];
     this.reviewIndex = 0;
     this.reviewedThisSession = 0;
     this._reviewInProgress = true;
@@ -555,9 +576,15 @@ class App {
       document.getElementById('review-empty').style.display = '';
       document.getElementById('review-active').style.display = 'none';
       document.querySelector('#view-review .empty-state .empty-icon').textContent = '🎉';
-      document.querySelector('#view-review .empty-state h3').textContent = 'All caught up!';
-      document.querySelector('#view-review .empty-state p').textContent =
-        `No cards are due for review right now. (${alreadyDone}/${DAILY_LIMIT} reviewed today)`;
+      const h3 = document.querySelector('#view-review .empty-state h3');
+      const p = document.querySelector('#view-review .empty-state p');
+      if (newDue.length > 0 && newRemaining === 0) {
+        h3.textContent = 'New-card limit reached';
+        p.textContent = `You've introduced ${newDoneToday}/${NEW_LIMIT} new words today. Come back tomorrow for more, or adjust the limit in Goals & Settings.`;
+      } else {
+        h3.textContent = 'All caught up!';
+        p.textContent = `No cards are due for review right now. (${alreadyDone}/${DAILY_LIMIT} reviewed today)`;
+      }
     } else {
       document.getElementById('review-empty').style.display = 'none';
       document.getElementById('review-active').style.display = '';
@@ -653,6 +680,8 @@ class App {
 
   rateCard(rating) {
     const word = this.reviewQueue[this.reviewIndex];
+    // Was this a brand-new card before this rating?
+    const wasNew = SM2.getStatus(word.sm2) === 'new';
 
     // Find the word in main data and update
     const idx = this.data.words.findIndex(w => w.id === word.id);
@@ -666,6 +695,7 @@ class App {
     }
 
     this.data.stats.reviewedToday++;
+    if (wasNew) this.data.stats.newIntroducedToday = (this.data.stats.newIntroducedToday || 0) + 1;
     this.reviewedThisSession++;
     Store.save(this.data);
     this.updateSidebarStats();
@@ -1225,6 +1255,7 @@ class App {
   renderGoals() {
     const g = this.data.goals || Store.defaultGoals();
     document.getElementById('goal-vocab-daily').value = g.dailyVocabLimit;
+    document.getElementById('goal-vocab-new').value = g.dailyNewLimit ?? 20;
     document.getElementById('goal-study-daily').value = g.dailyHours;
     document.getElementById('goal-study-weekly').value = g.weeklyHours;
     document.getElementById('goal-total-hours').value = this.data.studyTime.totalHours;
@@ -1233,6 +1264,7 @@ class App {
 
   saveGoals() {
     const dailyVocab = parseInt(document.getElementById('goal-vocab-daily').value);
+    const dailyNew = parseInt(document.getElementById('goal-vocab-new').value);
     const dailyHours = parseFloat(document.getElementById('goal-study-daily').value);
     const weeklyHours = parseFloat(document.getElementById('goal-study-weekly').value);
     const totalHours = parseFloat(document.getElementById('goal-total-hours').value);
@@ -1240,6 +1272,9 @@ class App {
     // Validate
     if (!dailyVocab || dailyVocab < 5 || dailyVocab > 500) {
       return this._showGoalsFeedback('Daily vocab limit must be between 5 and 500', 'error');
+    }
+    if (isNaN(dailyNew) || dailyNew < 0 || dailyNew > 100) {
+      return this._showGoalsFeedback('New words per day must be between 0 and 100', 'error');
     }
     if (!dailyHours || dailyHours < 0.25 || dailyHours > 24) {
       return this._showGoalsFeedback('Daily hours must be between 0.25 and 24', 'error');
@@ -1253,6 +1288,7 @@ class App {
 
     this.data.goals = {
       dailyVocabLimit: dailyVocab,
+      dailyNewLimit: dailyNew,
       dailyHours: dailyHours,
       weeklyHours: weeklyHours,
     };
