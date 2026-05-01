@@ -488,6 +488,15 @@ class App {
 
   // ---- Review ----
 
+  // Alternate review direction each day:
+  // even epoch-day → Spanish→English, odd → English→Spanish
+  getReviewDirection() {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const dayNum = Math.floor(startOfToday.getTime() / (1000 * 60 * 60 * 24));
+    return dayNum % 2 === 0 ? 'es-en' : 'en-es';
+  }
+
   startReview() {
     const DAILY_LIMIT = 50;
     const alreadyDone = this.data.stats.reviewedToday || 0;
@@ -556,17 +565,33 @@ class App {
     const word = this.reviewQueue[this.reviewIndex];
     const card = document.getElementById('flashcard');
     const inner = card.querySelector('.flashcard-inner');
+    const direction = this.getReviewDirection(); // 'es-en' or 'en-es'
 
     // Disable flip transition during content swap so the back face
     // (with the new English translation) isn't visible during the reset.
     inner.style.transition = 'none';
     card.classList.remove('flipped');
 
-    document.getElementById('card-front-word').textContent = word.spanish;
-    document.getElementById('card-front-hint').textContent =
-      word.example ? '(has example)' : '';
-    document.getElementById('card-back-word').textContent = word.english;
-    document.getElementById('card-back-example').textContent = word.example || '';
+    if (direction === 'es-en') {
+      // Spanish on front, English on back (default)
+      document.getElementById('card-front-label').textContent = 'Spanish';
+      document.getElementById('card-back-label').textContent = 'English';
+      document.getElementById('card-front-word').textContent = word.spanish;
+      document.getElementById('card-back-word').textContent = word.english;
+      document.getElementById('card-front-hint').textContent =
+        word.example ? '(has example)' : '';
+      document.getElementById('card-back-example').textContent = word.example || '';
+      document.getElementById('review-direction').textContent = '🇪🇸 → 🇬🇧';
+    } else {
+      // English on front, Spanish on back (reverse day)
+      document.getElementById('card-front-label').textContent = 'English';
+      document.getElementById('card-back-label').textContent = 'Spanish';
+      document.getElementById('card-front-word').textContent = word.english;
+      document.getElementById('card-back-word').textContent = word.spanish;
+      document.getElementById('card-front-hint').textContent = '';
+      document.getElementById('card-back-example').textContent = word.example || '';
+      document.getElementById('review-direction').textContent = '🇬🇧 → 🇪🇸';
+    }
 
     // Force reflow so the un-flip lands instantly, then restore transition
     // for the user's next deliberate flip.

@@ -121,6 +121,7 @@
         <div id="review-active" class="review-container" style="display:none;">
           <div class="review-progress">
             <span id="review-count">0 / 0</span>
+            <span class="review-direction" id="review-direction">🇪🇸 → 🇬🇧</span>
             <div class="review-progress-bar">
               <div class="review-progress-fill" id="review-progress-fill"></div>
             </div>
@@ -129,12 +130,12 @@
             <div class="flashcard" id="flashcard">
               <div class="flashcard-inner">
                 <div class="flashcard-front">
-                  <span class="card-label">Spanish</span>
+                  <span class="card-label" id="card-front-label">Spanish</span>
                   <span class="card-word" id="card-front-word"></span>
                   <span class="card-hint" id="card-front-hint"></span>
                 </div>
                 <div class="flashcard-back">
-                  <span class="card-label">English</span>
+                  <span class="card-label" id="card-back-label">English</span>
                   <span class="card-word" id="card-back-word"></span>
                   <span class="card-example" id="card-back-example"></span>
                 </div>
@@ -351,10 +352,10 @@
     </main>
   </div>
 
-  <script src="firebase-sync.js?v=9"></script>
-  <script src="grammar-data.js?v=9"></script>
-  <script src="grammar.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="firebase-sync.js?v=10"></script>
+  <script src="grammar-data.js?v=10"></script>
+  <script src="grammar.js?v=10"></script>
+  <script src="app.js?v=10"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
