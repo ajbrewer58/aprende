@@ -406,6 +406,16 @@ class App {
         input.value = '';
       }
     });
+    // Initialize date input to today and wire up the "Today" button
+    const dateInput = document.getElementById('study-date');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (dateInput) {
+      dateInput.value = todayStr;
+      dateInput.max = todayStr; // Don't allow future dates
+    }
+    document.getElementById('study-date-today').addEventListener('click', () => {
+      dateInput.value = new Date().toISOString().slice(0, 10);
+    });
   }
 
   navigate(view) {
@@ -1000,13 +1010,29 @@ class App {
 
   // ---- Study Time ----
 
+  // Read the selected date from the date input. If it's today (or empty),
+  // returns the current timestamp. Otherwise returns midday of that date.
+  _getStudySessionDate() {
+    const input = document.getElementById('study-date');
+    if (!input || !input.value) return Date.now();
+    // input.value is YYYY-MM-DD in local time
+    const [y, m, d] = input.value.split('-').map(Number);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (input.value === todayStr) return Date.now();
+    // For backfilled sessions, use noon local time so it lands clearly within that day
+    return new Date(y, m - 1, d, 12, 0, 0).getTime();
+  }
+
   addStudySession(minutes) {
     const hours = minutes / 60;
+    const date = this._getStudySessionDate();
     this.data.studyTime.totalHours = +(this.data.studyTime.totalHours + hours).toFixed(2);
-    this.data.studyTime.sessions.push({ date: Date.now(), hours });
-    // Keep only last 200 sessions to avoid bloat
-    if (this.data.studyTime.sessions.length > 200) {
-      this.data.studyTime.sessions = this.data.studyTime.sessions.slice(-200);
+    this.data.studyTime.sessions.push({ date, hours });
+    // Keep sessions sorted chronologically
+    this.data.studyTime.sessions.sort((a, b) => a.date - b.date);
+    // Keep only last 500 sessions to avoid bloat
+    if (this.data.studyTime.sessions.length > 500) {
+      this.data.studyTime.sessions = this.data.studyTime.sessions.slice(-500);
     }
     Store.save(this.data);
     this.renderStudyTime();

@@ -314,6 +314,11 @@
 
         <div class="study-add-section">
           <h3>Log a Session</h3>
+          <div class="study-date-row">
+            <label for="study-date">Date:</label>
+            <input type="date" id="study-date" class="study-date-input">
+            <button id="study-date-today" class="study-date-today">Today</button>
+          </div>
           <div class="study-add-buttons">
             <button class="study-add-btn" data-mins="15">+ 15 min</button>
             <button class="study-add-btn" data-mins="30">+ 30 min</button>
@@ -352,10 +357,10 @@
     </main>
   </div>
 
-  <script src="firebase-sync.js?v=10"></script>
-  <script src="grammar-data.js?v=10"></script>
-  <script src="grammar.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="firebase-sync.js?v=11"></script>
+  <script src="grammar-data.js?v=11"></script>
+  <script src="grammar.js?v=11"></script>
+  <script src="app.js?v=11"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');

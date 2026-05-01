@@ -1537,6 +1537,48 @@ body {
   transform: translateY(-1px);
 }
 
+.study-date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #2a2e3d;
+}
+
+.study-date-row label {
+  color: #8a8f9c;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.study-date-input {
+  background: #0f1117;
+  border: 1px solid #2a2e3d;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  color-scheme: dark;
+}
+
+.study-date-today {
+  background: #2a2e3d;
+  color: #fff;
+  border: 1px solid #3a3f50;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.study-date-today:hover {
+  background: #6c5ce7;
+  border-color: #6c5ce7;
+}
+
 .study-custom-row {
   display: flex;
   gap: 10px;
