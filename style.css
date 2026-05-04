@@ -264,6 +264,19 @@ body {
 /* Review */
 .review-container { max-width: 500px; margin: 0 auto; text-align: center; }
 
+.review-extend-btn {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  border: none;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.1s;
+}
+.review-extend-btn:hover { transform: translateY(-1px); }
 .review-progress { margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 #review-count { font-size: 0.85rem; color: var(--text-dim); }
 .review-direction {

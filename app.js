@@ -362,6 +362,11 @@ class App {
       this.navigate('review');
     });
 
+    // "Keep reviewing" button — bypass daily limits for an extended session
+    document.getElementById('review-extend-btn').addEventListener('click', () => {
+      this.startExtendedReview();
+    });
+
     // Flashcard flip
     document.getElementById('flashcard').addEventListener('click', () => this.flipCard());
 
@@ -446,6 +451,11 @@ class App {
   }
 
   navigate(view) {
+    // Leaving review resets the extended-session flag so the next entry
+    // respects the daily caps again.
+    if (this.currentView === 'review' && view !== 'review') {
+      this._extendedReview = false;
+    }
     this.currentView = view;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`view-${view}`).classList.add('active');
@@ -540,19 +550,15 @@ class App {
     const NEW_LIMIT = this.data.goals?.dailyNewLimit ?? 20;
     const alreadyDone = this.data.stats.reviewedToday || 0;
     const newDoneToday = this.data.stats.newIntroducedToday || 0;
-    const totalRemaining = Math.max(DAILY_LIMIT - alreadyDone, 0);
-    const newRemaining = Math.max(NEW_LIMIT - newDoneToday, 0);
+    const extended = this._extendedReview === true;
 
-    if (totalRemaining === 0) {
-      this._reviewInProgress = false;
-      document.getElementById('review-empty').style.display = '';
-      document.getElementById('review-active').style.display = 'none';
-      document.querySelector('#view-review .empty-state .empty-icon').textContent = '🎉';
-      document.querySelector('#view-review .empty-state h3').textContent = 'Daily goal complete!';
-      document.querySelector('#view-review .empty-state p').textContent =
-        `You've reviewed all ${DAILY_LIMIT} cards for today. Come back tomorrow!`;
-      return;
-    }
+    // In extended mode, ignore the daily caps entirely (cap to all due cards)
+    const totalRemaining = extended
+      ? Number.POSITIVE_INFINITY
+      : Math.max(DAILY_LIMIT - alreadyDone, 0);
+    const newRemaining = extended
+      ? Number.POSITIVE_INFINITY
+      : Math.max(NEW_LIMIT - newDoneToday, 0);
 
     // Split due cards into review-cards (already learning/learned) and new-cards (never reviewed)
     const dueCards = this.data.words.filter(w => SM2.isDue(w.sm2));
@@ -560,11 +566,26 @@ class App {
     const reviewDue = dueCards.filter(w => !isNew(w)).sort((a, b) => a.sm2.dueDate - b.sm2.dueDate);
     const newDue = dueCards.filter(isNew).sort((a, b) => a.createdAt - b.createdAt);
 
+    // Daily-limit blocked path (only when NOT in extended mode)
+    if (!extended && totalRemaining === 0) {
+      this._reviewInProgress = false;
+      this._showReviewEmpty(
+        '🏆',
+        'Daily goal complete!',
+        `You've hit your ${DAILY_LIMIT}-card daily goal! Come back tomorrow, or keep going for extra practice.`,
+        dueCards.length > 0
+      );
+      return;
+    }
+
     // Take all due reviews first (capped by total daily limit), then fill the
     // remainder with new cards capped by the daily new-card limit.
-    const reviewSlice = reviewDue.slice(0, totalRemaining);
-    const slotsLeftAfterReviews = Math.max(totalRemaining - reviewSlice.length, 0);
-    const newSlice = newDue.slice(0, Math.min(newRemaining, slotsLeftAfterReviews));
+    const reviewSlice = reviewDue.slice(0, isFinite(totalRemaining) ? totalRemaining : reviewDue.length);
+    const slotsLeftAfterReviews = isFinite(totalRemaining)
+      ? Math.max(totalRemaining - reviewSlice.length, 0)
+      : Number.POSITIVE_INFINITY;
+    const newCap = Math.min(newRemaining, slotsLeftAfterReviews);
+    const newSlice = newDue.slice(0, isFinite(newCap) ? newCap : newDue.length);
 
     this.reviewQueue = [...reviewSlice, ...newSlice];
     this.reviewIndex = 0;
@@ -573,23 +594,44 @@ class App {
 
     if (this.reviewQueue.length === 0) {
       this._reviewInProgress = false;
-      document.getElementById('review-empty').style.display = '';
-      document.getElementById('review-active').style.display = 'none';
-      document.querySelector('#view-review .empty-state .empty-icon').textContent = '🎉';
-      const h3 = document.querySelector('#view-review .empty-state h3');
-      const p = document.querySelector('#view-review .empty-state p');
-      if (newDue.length > 0 && newRemaining === 0) {
-        h3.textContent = 'New-card limit reached';
-        p.textContent = `You've introduced ${newDoneToday}/${NEW_LIMIT} new words today. Come back tomorrow for more, or adjust the limit in Goals & Settings.`;
+      // If new-card cap was the only thing blocking, offer to extend
+      const blockedByNewCap = newDue.length > 0 && newRemaining === 0 && reviewDue.length === 0;
+      const hasMoreDue = dueCards.length > 0;
+      if (blockedByNewCap) {
+        this._showReviewEmpty(
+          '🌱',
+          'New-card limit reached',
+          `You've introduced ${newDoneToday}/${NEW_LIMIT} new words today. Come back tomorrow, or keep going for extra practice.`,
+          hasMoreDue
+        );
       } else {
-        h3.textContent = 'All caught up!';
-        p.textContent = `No cards are due for review right now. (${alreadyDone}/${DAILY_LIMIT} reviewed today)`;
+        this._showReviewEmpty(
+          '🎉',
+          'All caught up!',
+          `No cards are due for review right now. (${alreadyDone}/${DAILY_LIMIT} reviewed today)`,
+          false
+        );
       }
     } else {
       document.getElementById('review-empty').style.display = 'none';
       document.getElementById('review-active').style.display = '';
       this.showCard();
     }
+  }
+
+  _showReviewEmpty(icon, heading, body, showExtendButton) {
+    document.getElementById('review-empty').style.display = '';
+    document.getElementById('review-active').style.display = 'none';
+    document.querySelector('#view-review .empty-state .empty-icon').textContent = icon;
+    document.querySelector('#view-review .empty-state h3').textContent = heading;
+    document.querySelector('#view-review .empty-state p').textContent = body;
+    const btn = document.getElementById('review-extend-btn');
+    if (btn) btn.style.display = showExtendButton ? '' : 'none';
+  }
+
+  startExtendedReview() {
+    this._extendedReview = true;
+    this.startReview();
   }
 
   showCard() {
@@ -599,20 +641,21 @@ class App {
     if (this.reviewIndex >= this.reviewQueue.length) {
       // Session complete
       this._reviewInProgress = false;
-      document.getElementById('review-empty').style.display = '';
-      document.getElementById('review-active').style.display = 'none';
-      const icon = document.querySelector('#view-review .empty-state .empty-icon');
-      const h3 = document.querySelector('#view-review .empty-state h3');
-      const p = document.querySelector('#view-review .empty-state p');
-
+      const dueLeft = this.data.words.filter(w => SM2.isDue(w.sm2)).length;
       if (totalToday >= DAILY_LIMIT) {
-        icon.textContent = '🏆';
-        h3.textContent = 'Daily goal complete!';
-        p.textContent = `Amazing! You've hit your ${DAILY_LIMIT}-card daily goal. Rest up and come back tomorrow!`;
+        this._showReviewEmpty(
+          '🏆',
+          'Daily goal complete!',
+          `Amazing! You've hit your ${DAILY_LIMIT}-card daily goal. Come back tomorrow, or keep going for extra practice.`,
+          dueLeft > 0
+        );
       } else {
-        icon.textContent = '🎉';
-        h3.textContent = 'Session complete!';
-        p.textContent = `You reviewed ${this.reviewedThisSession} cards. (${totalToday}/${DAILY_LIMIT} today)`;
+        this._showReviewEmpty(
+          '🎉',
+          'Session complete!',
+          `You reviewed ${this.reviewedThisSession} cards. (${totalToday}/${DAILY_LIMIT} today)`,
+          dueLeft > 0
+        );
       }
       return;
     }
