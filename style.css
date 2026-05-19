@@ -1898,3 +1898,230 @@ body {
   .goal-input-wrap { width: 100%; justify-content: space-between; }
   .goal-input-wrap input { flex: 1; }
 }
+
+/* ============================================================
+   Notes View
+   ============================================================ */
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.notes-header h2 { margin: 0; }
+
+.notes-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  height: calc(100vh - 200px);
+  min-height: 500px;
+}
+
+.notes-sidebar {
+  background: #1a1d27;
+  border: 1px solid #2a2e3d;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.notes-search {
+  background: #0f1117;
+  border: 1px solid #2a2e3d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.notes-search:focus {
+  outline: none;
+  border-color: #6c5ce7;
+}
+
+.notes-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notes-list-empty {
+  text-align: center;
+  color: #8a8f9c;
+  padding: 30px 10px;
+  font-size: 13px;
+}
+
+.notes-list-item {
+  background: #0f1117;
+  border: 1px solid #2a2e3d;
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: #fff;
+  transition: all 0.15s;
+}
+
+.notes-list-item:hover {
+  border-color: #6c5ce7;
+  background: #181a26;
+}
+
+.notes-list-item.active {
+  border-color: #6c5ce7;
+  background: linear-gradient(135deg, #1a1633, #181a26);
+}
+
+.notes-item-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notes-item-preview {
+  color: #8a8f9c;
+  font-size: 12px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notes-item-preview em { font-style: italic; opacity: 0.6; }
+
+.notes-item-date {
+  color: #6a6f7c;
+  font-size: 11px;
+}
+
+/* Editor side */
+.notes-editor-wrap {
+  background: #1a1d27;
+  border: 1px solid #2a2e3d;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notes-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #8a8f9c;
+}
+
+.notes-empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+.notes-empty h3 {
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.notes-empty p { margin: 0; }
+
+.notes-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+.note-title {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #2a2e3d;
+  padding: 8px 0 12px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: inherit;
+  width: 100%;
+}
+
+.note-title:focus {
+  outline: none;
+  border-bottom-color: #6c5ce7;
+}
+
+.note-body {
+  flex: 1;
+  background: #0f1117;
+  border: 1px solid #2a2e3d;
+  border-radius: 8px;
+  padding: 14px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: none;
+  min-height: 200px;
+}
+
+.note-body:focus {
+  outline: none;
+  border-color: #6c5ce7;
+}
+
+.notes-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.note-saved-status {
+  color: #00b894;
+  font-size: 13px;
+}
+
+.note-delete-btn {
+  background: transparent;
+  color: #e17055;
+  border: 1px solid #4a2a2a;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.note-delete-btn:hover {
+  background: #e17055;
+  color: #fff;
+  border-color: #e17055;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .notes-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .notes-sidebar {
+    max-height: 250px;
+  }
+  .notes-editor-wrap {
+    min-height: 400px;
+  }
+}

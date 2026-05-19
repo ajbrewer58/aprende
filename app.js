@@ -112,6 +112,10 @@ const Store = {
       if (data.stats.newIntroducedToday == null) {
         data.stats.newIntroducedToday = 0;
       }
+      // Migrate: notes array
+      if (!data.notes) {
+        data.notes = [];
+      }
       return data;
     } catch {
       return this.defaults();
@@ -140,7 +144,8 @@ const Store = {
       words: [],
       stats: { reviewedToday: 0, newIntroducedToday: 0, lastReviewDate: null, streak: 0 },
       studyTime: { totalHours: 100, sessions: [] },
-      goals: { dailyVocabLimit: 50, dailyNewLimit: 20, dailyHours: 2, weeklyHours: 6 }
+      goals: { dailyVocabLimit: 50, dailyNewLimit: 20, dailyHours: 2, weeklyHours: 6 },
+      notes: []
     };
   }
 };
@@ -448,6 +453,13 @@ class App {
     // Goals
     document.getElementById('goals-save').addEventListener('click', () => this.saveGoals());
     document.getElementById('goals-reset').addEventListener('click', () => this.resetGoals());
+
+    // Notes
+    document.getElementById('notes-new-btn').addEventListener('click', () => this.createNote());
+    document.getElementById('notes-search').addEventListener('input', () => this.renderNotesList());
+    document.getElementById('note-title').addEventListener('input', () => this.handleNoteEdit());
+    document.getElementById('note-body').addEventListener('input', () => this.handleNoteEdit());
+    document.getElementById('note-delete-btn').addEventListener('click', () => this.deleteSelectedNote());
   }
 
   navigate(view) {
@@ -471,6 +483,7 @@ class App {
     if (view === 'grammar-sheets') this.grammar.renderCheatSheets();
     if (view === 'study') this.renderStudyTime();
     if (view === 'goals') this.renderGoals();
+    if (view === 'notes') this.renderNotes();
   }
 
   updateSidebarStats() {
@@ -1360,6 +1373,133 @@ class App {
         el.className = 'goals-feedback';
       }, 3000);
     }
+  }
+
+  // ---- Notes ----
+
+  renderNotes() {
+    if (!this.data.notes) this.data.notes = [];
+    this.renderNotesList();
+    // Try to restore the previously selected note, otherwise show empty state
+    if (this._selectedNoteId && this.data.notes.find(n => n.id === this._selectedNoteId)) {
+      this.openNote(this._selectedNoteId);
+    } else {
+      this._showNotesEmpty();
+    }
+  }
+
+  renderNotesList() {
+    const list = document.getElementById('notes-list');
+    const query = document.getElementById('notes-search').value.trim().toLowerCase();
+    let notes = [...(this.data.notes || [])];
+
+    if (query) {
+      notes = notes.filter(n =>
+        (n.title || '').toLowerCase().includes(query) ||
+        (n.body || '').toLowerCase().includes(query)
+      );
+    }
+
+    // Sort by most recently updated
+    notes.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    if (notes.length === 0) {
+      list.innerHTML = `<div class="notes-list-empty">${query ? 'No matching notes' : 'No notes yet'}</div>`;
+      return;
+    }
+
+    list.innerHTML = notes.map(n => {
+      const preview = (n.body || '').replace(/\s+/g, ' ').slice(0, 60);
+      const title = n.title || 'Untitled';
+      const dt = new Date(n.updatedAt || n.createdAt || Date.now());
+      const dateStr = dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+      const isActive = n.id === this._selectedNoteId;
+      return `
+        <button class="notes-list-item ${isActive ? 'active' : ''}" data-note-id="${n.id}">
+          <div class="notes-item-title">${this.escapeHtml(title)}</div>
+          <div class="notes-item-preview">${this.escapeHtml(preview) || '<em>Empty</em>'}</div>
+          <div class="notes-item-date">${dateStr}</div>
+        </button>
+      `;
+    }).join('');
+
+    // Wire up click handlers on each item
+    list.querySelectorAll('.notes-list-item').forEach(btn => {
+      btn.addEventListener('click', () => this.openNote(btn.dataset.noteId));
+    });
+  }
+
+  createNote() {
+    const now = Date.now();
+    const note = {
+      id: this.generateId(),
+      title: '',
+      body: '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.data.notes.unshift(note);
+    Store.save(this.data);
+    this.openNote(note.id);
+    this.renderNotesList();
+    // Focus the title input
+    setTimeout(() => document.getElementById('note-title').focus(), 50);
+  }
+
+  openNote(id) {
+    const note = this.data.notes.find(n => n.id === id);
+    if (!note) {
+      this._showNotesEmpty();
+      return;
+    }
+    this._selectedNoteId = id;
+    document.getElementById('notes-empty').style.display = 'none';
+    document.getElementById('notes-editor').style.display = '';
+    document.getElementById('note-title').value = note.title || '';
+    document.getElementById('note-body').value = note.body || '';
+    this._setNoteSavedStatus('');
+    this.renderNotesList();
+  }
+
+  handleNoteEdit() {
+    const id = this._selectedNoteId;
+    if (!id) return;
+    const note = this.data.notes.find(n => n.id === id);
+    if (!note) return;
+
+    note.title = document.getElementById('note-title').value;
+    note.body = document.getElementById('note-body').value;
+    note.updatedAt = Date.now();
+
+    this._setNoteSavedStatus('Saving…');
+    clearTimeout(this._noteSaveDebounce);
+    this._noteSaveDebounce = setTimeout(() => {
+      Store.save(this.data);
+      this._setNoteSavedStatus('Saved ✓');
+      this.renderNotesList();
+    }, 400);
+  }
+
+  deleteSelectedNote() {
+    const id = this._selectedNoteId;
+    if (!id) return;
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+    this.data.notes = this.data.notes.filter(n => n.id !== id);
+    this._selectedNoteId = null;
+    Store.save(this.data);
+    this._showNotesEmpty();
+    this.renderNotesList();
+  }
+
+  _setNoteSavedStatus(text) {
+    const el = document.getElementById('note-saved-status');
+    if (el) el.textContent = text;
+  }
+
+  _showNotesEmpty() {
+    this._selectedNoteId = null;
+    document.getElementById('notes-empty').style.display = '';
+    document.getElementById('notes-editor').style.display = 'none';
   }
 
   // ---- Utilities ----

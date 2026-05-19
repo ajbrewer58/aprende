@@ -34,6 +34,7 @@
         <li><a href="#" data-view="grammar-sheets">Cheat Sheets</a></li>
         <li class="nav-group-header">Study</li>
         <li><a href="#" data-view="study">Study Time</a></li>
+        <li><a href="#" data-view="notes">Notes</a></li>
         <li><a href="#" data-view="goals">Goals & Settings</a></li>
       </ul>
       <div class="sidebar-stats">
@@ -357,6 +358,35 @@
         </div>
       </section>
 
+      <!-- Notes View -->
+      <section id="view-notes" class="view">
+        <div class="notes-header">
+          <h2>Notes</h2>
+          <button id="notes-new-btn" class="btn btn-primary">+ New Note</button>
+        </div>
+        <div class="notes-layout">
+          <aside class="notes-sidebar">
+            <input type="text" id="notes-search" placeholder="Search notes..." class="notes-search">
+            <div id="notes-list" class="notes-list"></div>
+          </aside>
+          <div class="notes-editor-wrap">
+            <div id="notes-empty" class="notes-empty">
+              <div class="notes-empty-icon">📝</div>
+              <h3>No note selected</h3>
+              <p>Pick a note from the list or create a new one to get started.</p>
+            </div>
+            <div id="notes-editor" class="notes-editor" style="display:none;">
+              <input type="text" id="note-title" class="note-title" placeholder="Note title">
+              <textarea id="note-body" class="note-body" placeholder="Write your note here... (Spanish grammar tips, vocab themes, study reflections, etc.)"></textarea>
+              <div class="notes-editor-footer">
+                <span id="note-saved-status" class="note-saved-status"></span>
+                <button id="note-delete-btn" class="note-delete-btn">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Goals & Settings View -->
       <section id="view-goals" class="view">
         <h2>Goals & Settings</h2>
@@ -419,10 +449,10 @@
     </main>
   </div>
 
-  <script src="firebase-sync.js?v=14"></script>
-  <script src="grammar-data.js?v=14"></script>
-  <script src="grammar.js?v=14"></script>
-  <script src="app.js?v=14"></script>
+  <script src="firebase-sync.js?v=15"></script>
+  <script src="grammar-data.js?v=15"></script>
+  <script src="grammar.js?v=15"></script>
+  <script src="app.js?v=15"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
